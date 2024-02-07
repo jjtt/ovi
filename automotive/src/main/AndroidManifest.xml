@@ -17,6 +17,8 @@
         android:name="android.hardware.screen.landscape"
         android:required="false" />
 
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
         android:allowBackup="true"
         android:appCategory="audio"
