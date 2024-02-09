@@ -1,5 +1,6 @@
 package fi.torma.ovi
 
+import SettingsScreen
 import androidx.car.app.CarContext
 import androidx.car.app.CarToast
 import androidx.car.app.Screen
@@ -14,7 +15,7 @@ import androidx.car.app.model.Template
 class MainScreen(carContext: CarContext) : Screen(carContext) {
     override fun onGetTemplate(): Template {
         val row: Row = Row.Builder()
-            .setTitle("Terve, #badgamers").build()
+            .setTitle("CarAppApiLevel=" + carContext.carAppApiLevel).build()
 
         val action = Action.Builder().setOnClickListener{
             screenManager.push(SettingsScreen(carContext))
