@@ -12,15 +12,15 @@ import okhttp3.Request
 import java.util.concurrent.ConcurrentHashMap
 
 
-suspend fun requestInputStatus(): String? = withContext(Dispatchers.IO) {
-    request("https://foobar.invalid/Input.GetStatus?id=0", "password")
+suspend fun requestInputStatus(password: String): String = withContext(Dispatchers.IO) {
+    request("https://foobar.invalid/Input.GetStatus?id=0", password)
 }
 
-suspend fun requestSwitchOn(): String? = withContext(Dispatchers.IO) {
-    request("https://foobar.invalid/Switch.Set?id=0&on=true", "password")
+suspend fun requestSwitchOn(password: String): String = withContext(Dispatchers.IO) {
+    request("https://foobar.invalid/Switch.Set?id=0&on=true", password)
 }
 
-fun request(url: String, password: String) : String {
+fun request(url: String, password: String): String {
     val authenticator = DigestAuthenticator(Credentials("admin", password))
 
     val authCache: Map<String, CachingAuthenticator> = ConcurrentHashMap()

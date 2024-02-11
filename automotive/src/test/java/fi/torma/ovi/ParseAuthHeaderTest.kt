@@ -10,7 +10,7 @@ class ParseAuthHeaderTest {
         println("Running testCoroutine")
         val result = requestInputStatus()
         println(result)
-        val result2 = requestSwitchOn()
+        val result2 = requestSwitchOn(password)
         println(result2)
     }
 }
