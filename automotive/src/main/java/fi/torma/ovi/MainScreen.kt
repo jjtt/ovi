@@ -102,7 +102,7 @@ class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleO
 
         val listBuilder = ItemList.Builder()
 
-        var door = GridItem.Builder()
+        val door = GridItem.Builder()
             .setTitle("Garage door")
         when (inputStatus) {
             null -> door.setLoading(true)
