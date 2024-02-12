@@ -1,5 +1,6 @@
 package fi.torma.ovi
 
+import ConfirmScreen
 import SettingsScreen
 import android.content.Context
 import android.content.pm.PackageManager
@@ -26,6 +27,7 @@ import password
 
 
 class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleObserver {
+    var toggle = false
     private var inputStatus: String? = null
     private var closeToDoor: Boolean? = false
     private var locationManager: LocationManager? = null
@@ -44,6 +46,8 @@ class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleO
             }
             val distance = location.distanceTo(targetLocation)
             closeToDoor = distance < 30
+            inputStatus = null
+            invalidate()
         }
 
         if (ContextCompat.checkSelfPermission(
@@ -155,10 +159,13 @@ class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleO
 
     private fun toggleDoor() {
         if (closeToDoor == true) {
-            GlobalScope.launch {
-                requestSwitchOn(password(carContext))
-                inputStatus = null
-                invalidate()
+            screenManager.push(ConfirmScreen(carContext, this))
+            if (toggle) {
+                GlobalScope.launch {
+                    requestSwitchOn(password(carContext))
+                    inputStatus = null
+                    invalidate()
+                }
             }
         } else {
             CarToast.makeText(
