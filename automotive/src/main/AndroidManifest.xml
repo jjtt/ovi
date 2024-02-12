@@ -44,8 +44,9 @@
         <activity
             android:name="androidx.car.app.activity.CarAppActivity"
             android:exported="true"
-            android:label="Ovi Starter"
+            android:label="Ovi"
             android:launchMode="singleTask"
+            android:icon="@drawable/baseline_door_front_24"
             android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
 
             <intent-filter>
