@@ -3,9 +3,8 @@ import androidx.car.app.Screen
 import androidx.car.app.model.Action
 import androidx.car.app.model.MessageTemplate
 import androidx.car.app.model.Template
-import fi.torma.ovi.MainScreen
 
-class ConfirmScreen(carContext: CarContext, private val mainScreen: MainScreen) :
+class ConfirmScreen(carContext: CarContext) :
     Screen(carContext) {
 
     override fun onGetTemplate(): Template {
@@ -15,7 +14,7 @@ class ConfirmScreen(carContext: CarContext, private val mainScreen: MainScreen) 
                 Action.Builder()
                     .setTitle("Yes")
                     .setOnClickListener {
-                        mainScreen.toggle = true
+                        setResult(true)
                         screenManager.pop()
                     }
                     .build()
@@ -24,7 +23,7 @@ class ConfirmScreen(carContext: CarContext, private val mainScreen: MainScreen) 
                 Action.Builder()
                     .setTitle("No")
                     .setOnClickListener {
-                        mainScreen.toggle = false
+                        setResult(false)
                         screenManager.pop()
                     }
                     .build()

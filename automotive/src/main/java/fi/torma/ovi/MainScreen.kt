@@ -7,8 +7,10 @@ import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
+import android.util.Log
 import androidx.car.app.CarContext
 import androidx.car.app.CarToast
+import androidx.car.app.OnScreenResultListener
 import androidx.car.app.Screen
 import androidx.car.app.model.Action
 import androidx.car.app.model.ActionStrip
@@ -22,20 +24,25 @@ import androidx.core.graphics.drawable.IconCompat
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import password
 
+enum class DoorStatus {
+    UNINITIALIZED,
+    INITIALIZED,
+    OPEN,
+    CLOSED
+}
 
 class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleObserver {
-    var toggle = false
-    private var inputStatus: String? = null
-    private var closeToDoor: Boolean? = false
+    private var inputStatus: DoorStatus = DoorStatus.UNINITIALIZED
+    private var closeToDoor: Boolean = false
     private var locationManager: LocationManager? = null
     private var locationListener: LocationListener? = null
 
     override fun onCreate(owner: LifecycleOwner) {
         super.onCreate(owner)
-
 
         locationManager = carContext.getSystemService(Context.LOCATION_SERVICE) as LocationManager
 
@@ -46,7 +53,7 @@ class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleO
             }
             val distance = location.distanceTo(targetLocation)
             closeToDoor = distance < 30
-            inputStatus = null
+            inputStatus = DoorStatus.INITIALIZED
             invalidate()
         }
 
@@ -86,7 +93,7 @@ class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleO
 
     override fun onStop(owner: LifecycleOwner) {
         super.onStop(owner)
-        inputStatus = null
+        inputStatus = DoorStatus.UNINITIALIZED
     }
 
     init {
@@ -94,6 +101,13 @@ class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleO
     }
 
     override fun onGetTemplate(): Template {
+        val invalidate = if (inputStatus == DoorStatus.UNINITIALIZED) {
+            inputStatus = DoorStatus.INITIALIZED
+            true
+        } else {
+            false
+        }
+
         fetchDoorStatus()
 
         val action = Action.Builder().setOnClickListener {
@@ -109,8 +123,15 @@ class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleO
         val door = GridItem.Builder()
             .setTitle("Garage door")
         when (inputStatus) {
-            null -> door.setLoading(true)
-            """{"id":0,"state":true}""" -> door
+            DoorStatus.UNINITIALIZED -> CarToast.makeText(
+                carContext,
+                "Door status uninitialized, this is a bug",
+                CarToast.LENGTH_LONG
+            )
+                .show()
+
+            DoorStatus.INITIALIZED -> door.setLoading(true)
+            DoorStatus.CLOSED -> door
                 .setImage(
                     CarIcon.Builder(
                         IconCompat.createWithResource(carContext, R.drawable.baseline_door_front_24)
@@ -118,7 +139,7 @@ class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleO
                 )
                 .setOnClickListener(this::toggleDoor)
 
-            """{"id":0,"state":false}""" -> door
+            DoorStatus.OPEN -> door
                 .setImage(
                     CarIcon.Builder(
                         IconCompat.createWithResource(
@@ -128,17 +149,18 @@ class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleO
                     ).build()
                 )
                 .setOnClickListener(this::toggleDoor)
-
-            else -> {
-                door.setLoading(true)
-                CarToast.makeText(carContext, "Failed to fetch door status", CarToast.LENGTH_LONG)
-                    .show()
-            }
         }
 
         listBuilder.addItem(
             door.build()
         )
+
+        if (invalidate) {
+            GlobalScope.launch {
+                delay(100)
+                invalidate()
+            }
+        }
 
         return GridTemplate.Builder()
             .setTitle("Devices")
@@ -149,24 +171,57 @@ class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleO
 
     private fun fetchDoorStatus() {
         GlobalScope.launch {
-            val newStatus = requestInputStatus(password(carContext))
-            if (newStatus != inputStatus) {
-                inputStatus = newStatus
-                invalidate()
+            try {
+                val newStatus = when (requestInputStatus(password(carContext))) {
+                    """{"id":0,"state":true}""" -> DoorStatus.CLOSED
+                    """{"id":0,"state":false}""" -> DoorStatus.OPEN
+                    else -> DoorStatus.INITIALIZED
+                }
+                if (newStatus != inputStatus) {
+                    inputStatus = newStatus
+                    invalidate()
+                }
+            } catch (e: Exception) {
+                Log.d("MainScreen", "Failed to fetch door status", e)
+                CarToast.makeText(
+                    carContext,
+                    "Door status error: " + e.message,
+                    CarToast.LENGTH_LONG
+                )
+                    .show()
             }
         }
     }
 
     private fun toggleDoor() {
         if (closeToDoor == true) {
-            screenManager.push(ConfirmScreen(carContext, this))
-            if (toggle) {
-                GlobalScope.launch {
-                    requestSwitchOn(password(carContext))
-                    inputStatus = null
-                    invalidate()
+            val listener = OnScreenResultListener { result ->
+                if (result == true) {
+                    GlobalScope.launch {
+                        try {
+                            val response = requestSwitchOn(password(carContext))
+                            if (response != null) {
+                                CarToast.makeText(
+                                    carContext,
+                                    "Door operating",
+                                    CarToast.LENGTH_LONG
+                                ).show()
+                                inputStatus = DoorStatus.INITIALIZED
+                                invalidate()
+                            }
+                        } catch (e: Exception) {
+                            Log.d("MainScreen", "Failed to open door", e)
+                            CarToast.makeText(
+                                carContext,
+                                "Failed to open door: " + e.message,
+                                CarToast.LENGTH_LONG
+                            )
+                                .show()
+                        }
+                    }
                 }
             }
+            screenManager.pushForResult(ConfirmScreen(carContext), listener)
         } else {
             CarToast.makeText(
                 carContext,
