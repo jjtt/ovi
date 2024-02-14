@@ -153,7 +153,19 @@ class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleO
 
         listBuilder.addItem(
             door.build()
-        )
+        ).addItem(
+            GridItem.Builder()
+                .setTitle("Refresh")
+                .setImage(
+                    CarIcon.Builder(
+                        IconCompat.createWithResource(carContext, R.drawable.baseline_refresh_24)
+                    ).build()
+                )
+                .setOnClickListener {
+                    inputStatus = DoorStatus.INITIALIZED
+                    invalidate()
+                }
+                .build())
 
         if (invalidate) {
             GlobalScope.launch {
