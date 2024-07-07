@@ -32,7 +32,8 @@ enum class DoorStatus {
     UNINITIALIZED,
     INITIALIZED,
     OPEN,
-    CLOSED
+    CLOSED,
+    INIT_ABORTED,
 }
 
 class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleObserver {
@@ -149,23 +150,53 @@ class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleO
                     ).build()
                 )
                 .setOnClickListener(this::toggleDoor)
+
+            DoorStatus.INIT_ABORTED -> door
+                .setImage(
+                    CarIcon.Builder(
+                        IconCompat.createWithResource(
+                            carContext,
+                            R.drawable.baseline_no_meeting_room_24
+                        )
+                    ).build()
+                )
+                .setOnClickListener(this::toggleDoor)
+        }
+
+        val refresh = GridItem.Builder()
+            .setTitle("Refresh")
+
+        when (inputStatus) {
+            DoorStatus.INITIALIZED -> {
+                refresh.setImage(
+                    CarIcon.Builder(
+                        IconCompat.createWithResource(carContext, R.drawable.baseline_cancel_24)
+                    ).build()
+                )
+                    .setOnClickListener {
+                        inputStatus = DoorStatus.INIT_ABORTED
+                        invalidate()
+                    }
+            }
+
+            else -> {
+                refresh.setImage(
+                    CarIcon.Builder(
+                        IconCompat.createWithResource(carContext, R.drawable.baseline_refresh_24)
+                    ).build()
+                )
+                    .setOnClickListener {
+                        inputStatus = DoorStatus.INITIALIZED
+                        invalidate()
+                    }
+            }
         }
 
         listBuilder.addItem(
             door.build()
         ).addItem(
-            GridItem.Builder()
-                .setTitle("Refresh")
-                .setImage(
-                    CarIcon.Builder(
-                        IconCompat.createWithResource(carContext, R.drawable.baseline_refresh_24)
-                    ).build()
-                )
-                .setOnClickListener {
-                    inputStatus = DoorStatus.INITIALIZED
-                    invalidate()
-                }
-                .build())
+            refresh.build()
+        )
 
         if (invalidate) {
             GlobalScope.launch {
