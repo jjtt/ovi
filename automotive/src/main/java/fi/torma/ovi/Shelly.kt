@@ -29,13 +29,9 @@ suspend fun request(url: String, password: String): String? {
             val authCache: Map<String, CachingAuthenticator> = ConcurrentHashMap()
             val client: OkHttpClient = OkHttpClient.Builder()
                 .authenticator(CachingAuthenticatorDecorator(authenticator, authCache))
-                .addInterceptor(AuthenticationCacheInterceptor(authCache))
-                .build()
+                .addInterceptor(AuthenticationCacheInterceptor(authCache)).build()
 
-            val request: Request = Request.Builder()
-                .url(url)
-                .get()
-                .build()
+            val request: Request = Request.Builder().url(url).get().build()
             val response = client.newCall(request).execute()
 
             response.body?.string()

@@ -29,11 +29,7 @@ import kotlinx.coroutines.launch
 import password
 
 enum class DoorStatus {
-    UNINITIALIZED,
-    INITIALIZED,
-    OPEN,
-    CLOSED,
-    INIT_ABORTED,
+    UNINITIALIZED, INITIALIZED, OPEN, CLOSED, INIT_ABORTED,
 }
 
 class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleObserver {
@@ -59,10 +55,8 @@ class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleO
         }
 
         if (ContextCompat.checkSelfPermission(
-                carContext,
-                android.Manifest.permission.ACCESS_FINE_LOCATION
-            )
-            != PackageManager.PERMISSION_GRANTED
+                carContext, android.Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
         ) {
             // Permission is not granted
             // Request the permission
@@ -85,10 +79,7 @@ class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleO
 
     private fun requestLocation() {
         locationManager?.requestLocationUpdates(
-            LocationManager.GPS_PROVIDER,
-            10000L,
-            10f,
-            locationListener!!
+            LocationManager.GPS_PROVIDER, 10000L, 10f, locationListener!!
         )
     }
 
@@ -113,58 +104,43 @@ class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleO
 
         val action = Action.Builder().setOnClickListener {
             screenManager.push(SettingsScreen(carContext))
-        }
-            .setTitle("Settings")
-            .build()
+        }.setTitle("Settings").build()
 
         val actionStrip: ActionStrip = ActionStrip.Builder().addAction(action).build()
 
         val listBuilder = ItemList.Builder()
 
-        val door = GridItem.Builder()
-            .setTitle("Garage door")
+        val door = GridItem.Builder().setTitle("Garage door")
         when (inputStatus) {
             DoorStatus.UNINITIALIZED -> CarToast.makeText(
-                carContext,
-                "Door status uninitialized, this is a bug",
-                CarToast.LENGTH_LONG
-            )
-                .show()
+                carContext, "Door status uninitialized, this is a bug", CarToast.LENGTH_LONG
+            ).show()
 
             DoorStatus.INITIALIZED -> door.setLoading(true)
-            DoorStatus.CLOSED -> door
-                .setImage(
-                    CarIcon.Builder(
-                        IconCompat.createWithResource(carContext, R.drawable.baseline_door_front_24)
-                    ).build()
-                )
-                .setOnClickListener(this::toggleDoor)
+            DoorStatus.CLOSED -> door.setImage(
+                CarIcon.Builder(
+                    IconCompat.createWithResource(carContext, R.drawable.baseline_door_front_24)
+                ).build()
+            ).setOnClickListener(this::toggleDoor)
 
-            DoorStatus.OPEN -> door
-                .setImage(
-                    CarIcon.Builder(
-                        IconCompat.createWithResource(
-                            carContext,
-                            R.drawable.baseline_meeting_room_24
-                        )
-                    ).build()
-                )
-                .setOnClickListener(this::toggleDoor)
+            DoorStatus.OPEN -> door.setImage(
+                CarIcon.Builder(
+                    IconCompat.createWithResource(
+                        carContext, R.drawable.baseline_meeting_room_24
+                    )
+                ).build()
+            ).setOnClickListener(this::toggleDoor)
 
-            DoorStatus.INIT_ABORTED -> door
-                .setImage(
-                    CarIcon.Builder(
-                        IconCompat.createWithResource(
-                            carContext,
-                            R.drawable.baseline_no_meeting_room_24
-                        )
-                    ).build()
-                )
-                .setOnClickListener(this::toggleDoor)
+            DoorStatus.INIT_ABORTED -> door.setImage(
+                CarIcon.Builder(
+                    IconCompat.createWithResource(
+                        carContext, R.drawable.baseline_no_meeting_room_24
+                    )
+                ).build()
+            ).setOnClickListener(this::toggleDoor)
         }
 
-        val refresh = GridItem.Builder()
-            .setTitle("Refresh")
+        val refresh = GridItem.Builder().setTitle("Refresh")
 
         when (inputStatus) {
             DoorStatus.INITIALIZED -> {
@@ -172,11 +148,10 @@ class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleO
                     CarIcon.Builder(
                         IconCompat.createWithResource(carContext, R.drawable.baseline_cancel_24)
                     ).build()
-                )
-                    .setOnClickListener {
-                        inputStatus = DoorStatus.INIT_ABORTED
-                        invalidate()
-                    }
+                ).setOnClickListener {
+                    inputStatus = DoorStatus.INIT_ABORTED
+                    invalidate()
+                }
             }
 
             else -> {
@@ -184,11 +159,10 @@ class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleO
                     CarIcon.Builder(
                         IconCompat.createWithResource(carContext, R.drawable.baseline_refresh_24)
                     ).build()
-                )
-                    .setOnClickListener {
-                        inputStatus = DoorStatus.INITIALIZED
-                        invalidate()
-                    }
+                ).setOnClickListener {
+                    inputStatus = DoorStatus.INITIALIZED
+                    invalidate()
+                }
             }
         }
 
@@ -205,11 +179,8 @@ class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleO
             }
         }
 
-        return GridTemplate.Builder()
-            .setTitle("Devices")
-            .setActionStrip(actionStrip)
-            .setSingleList(listBuilder.build())
-            .build()
+        return GridTemplate.Builder().setTitle("Devices").setActionStrip(actionStrip)
+            .setSingleList(listBuilder.build()).build()
     }
 
     private fun fetchDoorStatus() {
@@ -227,11 +198,8 @@ class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleO
             } catch (e: Exception) {
                 Log.d("MainScreen", "Failed to fetch door status", e)
                 CarToast.makeText(
-                    carContext,
-                    "Door status error: " + e.message,
-                    CarToast.LENGTH_LONG
-                )
-                    .show()
+                    carContext, "Door status error: " + e.message, CarToast.LENGTH_LONG
+                ).show()
             }
         }
     }
@@ -245,9 +213,7 @@ class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleO
                             val response = requestSwitchOn(password(carContext))
                             if (response != null) {
                                 CarToast.makeText(
-                                    carContext,
-                                    "Door operating",
-                                    CarToast.LENGTH_LONG
+                                    carContext, "Door operating", CarToast.LENGTH_LONG
                                 ).show()
                                 inputStatus = DoorStatus.INITIALIZED
                                 invalidate()
@@ -258,8 +224,7 @@ class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleO
                                 carContext,
                                 "Failed to open door: " + e.message,
                                 CarToast.LENGTH_LONG
-                            )
-                                .show()
+                            ).show()
                         }
                     }
                 }
@@ -267,11 +232,8 @@ class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleO
             screenManager.pushForResult(ConfirmScreen(carContext), listener)
         } else {
             CarToast.makeText(
-                carContext,
-                "You are not close enough to the door",
-                CarToast.LENGTH_LONG
-            )
-                .show()
+                carContext, "You are not close enough to the door", CarToast.LENGTH_LONG
+            ).show()
         }
     }
 }

@@ -17,17 +17,12 @@ class SettingsScreen(carContext: CarContext) : Screen(carContext) {
             }
         }
 
-        val passwordInput = InputSignInMethod.Builder(callback)
-            .setHint("Password")
+        val passwordInput = InputSignInMethod.Builder(callback).setHint("Password")
             .setDefaultValue(password(carContext))
-            .setInputType(InputSignInMethod.INPUT_TYPE_PASSWORD)
-            .build()
+            .setInputType(InputSignInMethod.INPUT_TYPE_PASSWORD).build()
 
-        return SignInTemplate.Builder(passwordInput)
-            .setTitle("Settings")
-            .setInstructions("Enter password for device")
-            .setHeaderAction(Action.BACK)
-            .build()
+        return SignInTemplate.Builder(passwordInput).setTitle("Settings")
+            .setInstructions("Enter password for device").setHeaderAction(Action.BACK).build()
     }
 }
 
