@@ -7,9 +7,10 @@ import com.burgstaller.okhttp.digest.Credentials
 import com.burgstaller.okhttp.digest.DigestAuthenticator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import java.time.Duration
 import java.util.concurrent.ConcurrentHashMap
 
 
@@ -23,11 +24,13 @@ suspend fun requestSwitchOn(password: String): String? = withContext(Dispatchers
 
 suspend fun request(url: String, password: String): String? {
     return withContext(Dispatchers.IO) {
-        withTimeout(10000) {
+        withTimeoutOrNull(1000) {
             val authenticator = DigestAuthenticator(Credentials("admin", password))
 
             val authCache: Map<String, CachingAuthenticator> = ConcurrentHashMap()
-            val client: OkHttpClient = OkHttpClient.Builder()
+            val client: OkHttpClient = OkHttpClient.Builder().callTimeout(Duration.ofSeconds(1))
+                .connectTimeout(Duration.ofSeconds(1)).readTimeout(Duration.ofSeconds(1))
+                .writeTimeout(Duration.ofSeconds(1))
                 .authenticator(CachingAuthenticatorDecorator(authenticator, authCache))
                 .addInterceptor(AuthenticationCacheInterceptor(authCache)).build()
 

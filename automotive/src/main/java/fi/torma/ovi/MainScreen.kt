@@ -186,10 +186,13 @@ class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleO
     private fun fetchDoorStatus() {
         GlobalScope.launch {
             try {
-                val newStatus = when (requestInputStatus(password(carContext))) {
+                Log.d("MainScreen", "Fetching door status")
+                val status = requestInputStatus(password(carContext))
+                Log.d("MainScreen", "Door status: $status")
+                val newStatus = when (status) {
                     """{"id":0,"state":true}""" -> DoorStatus.CLOSED
                     """{"id":0,"state":false}""" -> DoorStatus.OPEN
-                    else -> DoorStatus.INITIALIZED
+                    else -> DoorStatus.INIT_ABORTED
                 }
                 if (newStatus != inputStatus) {
                     inputStatus = newStatus
@@ -200,6 +203,8 @@ class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleO
                 CarToast.makeText(
                     carContext, "Door status error: " + e.message, CarToast.LENGTH_LONG
                 ).show()
+                inputStatus = DoorStatus.INIT_ABORTED
+                invalidate()
             }
         }
     }
