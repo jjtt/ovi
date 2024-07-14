@@ -49,9 +49,11 @@ class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleO
                 longitude = 25.0
             }
             val distance = location.distanceTo(targetLocation)
-            closeToDoor = distance < 200
-            inputStatus = DoorStatus.INITIALIZED
-            invalidate()
+            if (closeToDoor != (distance < 200)) {
+                closeToDoor = distance < 200
+                inputStatus = DoorStatus.INITIALIZED
+                invalidate()
+            }
         }
 
         if (ContextCompat.checkSelfPermission(
