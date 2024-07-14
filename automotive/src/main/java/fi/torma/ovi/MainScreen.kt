@@ -81,7 +81,7 @@ class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleO
 
     private fun requestLocation() {
         locationManager?.requestLocationUpdates(
-            LocationManager.GPS_PROVIDER, 10000L, 10f, locationListener!!
+            LocationManager.GPS_PROVIDER, 30000L, 100f, locationListener!!
         )
     }
 
