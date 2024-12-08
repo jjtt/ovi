@@ -139,7 +139,6 @@ class Shelly(
 
     override fun reset() {
         inputStatus = DoorStatus.UNKNOWN
-        closeToDoor = false
     }
 
     override fun refresh() {
