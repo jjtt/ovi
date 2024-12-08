@@ -18,10 +18,7 @@ import androidx.car.app.model.Template
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import password
+import java.util.concurrent.atomic.AtomicInteger
 
 enum class DoorStatus {
     INITIALIZED, OPEN, CLOSED, INIT_ABORTED,
@@ -30,11 +27,12 @@ enum class DoorStatus {
 class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleObserver {
     private val mainHandler = android.os.Handler(carContext.mainLooper)
     private var shelly: Shelly = Shelly(
-        carContext, screenManager, ::requestInvalidate
+        carContext, screenManager, ::requestInvalidate, ::requestToast
     ) // FIXME: Should be casted to superclass Device and not relying on knowing the implementation
 
     private var locationManager: LocationManager? = null
     private var locationListener: LocationListener? = null
+    private val toastCounter: AtomicInteger = AtomicInteger(0)
 
     fun requestInvalidate() {
         mainHandler.post {
@@ -44,6 +42,12 @@ class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleO
             )
             invalidate()
         }
+    }
+
+    fun requestToast(message: String) {
+        CarToast.makeText(
+            carContext, "${toastCounter.incrementAndGet()}: $message", CarToast.LENGTH_LONG
+        ).show()
     }
 
     override fun onCreate(owner: LifecycleOwner) {
@@ -59,8 +63,7 @@ class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleO
         ) {
             // Permission is not granted
             // Request the permission
-            CarToast.makeText(carContext, "Requesting location permission", CarToast.LENGTH_LONG)
-                .show()
+            requestToast("Requesting location permission")
             carContext.requestPermissions(
                 listOf(
                     android.Manifest.permission.ACCESS_FINE_LOCATION,

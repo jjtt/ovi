@@ -4,7 +4,6 @@ import ConfirmScreen
 import android.location.Location
 import android.util.Log
 import androidx.car.app.CarContext
-import androidx.car.app.CarToast
 import androidx.car.app.OnScreenResultListener
 import androidx.car.app.ScreenManager
 import androidx.car.app.model.CarIcon
@@ -29,7 +28,8 @@ import java.util.concurrent.ConcurrentHashMap
 class Shelly(
     private val carContext: CarContext,
     private val screenManager: ScreenManager,
-    private val requestInvalidate: () -> Unit
+    private val requestInvalidate: () -> Unit,
+    private val requestToast: (String) -> Unit
 ) : Device() {
 
     var inputStatus: DoorStatus = DoorStatus.INITIALIZED
@@ -126,20 +126,14 @@ class Shelly(
                         try {
                             val response = requestSwitchOn(password(carContext))
                             if (response != null) {
-                                CarToast.makeText(
-                                    carContext, "Door operating", CarToast.LENGTH_LONG
-                                ).show()
+                                requestToast("Door operating")
                                 inputStatus = DoorStatus.INITIALIZED
                                 Log.d("Shelly", "Current thread ID: ${Thread.currentThread().id}")
                                 requestInvalidate()
                             }
                         } catch (e: Exception) {
                             Log.d("MainScreen", "Failed to open door", e)
-                            CarToast.makeText(
-                                carContext,
-                                "Failed to open door: ${e.message}",
-                                CarToast.LENGTH_LONG
-                            ).show()
+                            requestToast("Failed to open door: ${e.message}")
                         }
                     }
                 }
@@ -147,9 +141,7 @@ class Shelly(
 
             screenManager.pushForResult(ConfirmScreen(carContext), listener)
         } else {
-            CarToast.makeText(
-                carContext, "You are not close enough to the door", CarToast.LENGTH_LONG
-            ).show()
+            requestToast("You are not close enough to the door")
         }
     }
 
@@ -174,9 +166,7 @@ class Shelly(
                 }
             } catch (e: Exception) {
                 Log.d("MainScreen", "Failed to fetch door status", e)
-                CarToast.makeText(
-                    carContext, "Door status error: ${e.message}", CarToast.LENGTH_LONG
-                ).show()
+                requestToast("Door status error: ${e.message}")
                 inputStatus = DoorStatus.INIT_ABORTED
                 Log.d(
                     "Shelly",
