@@ -32,7 +32,7 @@ class Shelly(
     private val requestToast: (String) -> Unit
 ) : Device() {
 
-    var inputStatus: DoorStatus = DoorStatus.INITIALIZED
+    var inputStatus: DoorStatus = DoorStatus.UNKNOWN
     var closeToDoor: Boolean = false
 
     init {
@@ -51,7 +51,7 @@ class Shelly(
         val distance = location.distanceTo(targetLocation)
         if (closeToDoor != (distance < 200)) {
             closeToDoor = distance < 200
-            inputStatus = DoorStatus.INITIALIZED
+            inputStatus = DoorStatus.UNKNOWN
             Log.d("Shelly", "Current thread ID: ${Thread.currentThread().id}")
             requestInvalidate()
         }
@@ -60,7 +60,7 @@ class Shelly(
     private fun buildDoor(): GridItem {
         val door = GridItem.Builder().setTitle("Garage door")
         when (inputStatus) {
-            DoorStatus.INITIALIZED -> door.setLoading(true)
+            DoorStatus.UNKNOWN -> door.setLoading(true)
             DoorStatus.CLOSED -> door.setImage(
                 CarIcon.Builder(
                     IconCompat.createWithResource(carContext, R.drawable.baseline_door_front_24)
@@ -90,7 +90,7 @@ class Shelly(
         val refresh = GridItem.Builder().setTitle("Refresh")
 
         when (inputStatus) {
-            DoorStatus.INITIALIZED -> {
+            DoorStatus.UNKNOWN -> {
                 refresh.setImage(
                     CarIcon.Builder(
                         IconCompat.createWithResource(carContext, R.drawable.baseline_cancel_24)
@@ -108,7 +108,7 @@ class Shelly(
                         IconCompat.createWithResource(carContext, R.drawable.baseline_refresh_24)
                     ).build()
                 ).setOnClickListener {
-                    inputStatus = DoorStatus.INITIALIZED
+                    inputStatus = DoorStatus.UNKNOWN
                     Log.d("Shelly", "Current thread ID: ${Thread.currentThread().id}")
                     refresh()
                     requestInvalidate()
@@ -127,7 +127,7 @@ class Shelly(
                             val response = requestSwitchOn(password(carContext))
                             if (response != null) {
                                 requestToast("Door operating")
-                                inputStatus = DoorStatus.INITIALIZED
+                                inputStatus = DoorStatus.UNKNOWN
                                 Log.d("Shelly", "Current thread ID: ${Thread.currentThread().id}")
                                 requestInvalidate()
                             }
@@ -143,6 +143,11 @@ class Shelly(
         } else {
             requestToast("You are not close enough to the door")
         }
+    }
+
+    override fun reset() {
+        inputStatus = DoorStatus.UNKNOWN
+        closeToDoor = false
     }
 
     override fun refresh() {

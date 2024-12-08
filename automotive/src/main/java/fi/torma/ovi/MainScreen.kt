@@ -21,14 +21,14 @@ import androidx.lifecycle.LifecycleOwner
 import java.util.concurrent.atomic.AtomicInteger
 
 enum class DoorStatus {
-    INITIALIZED, OPEN, CLOSED, INIT_ABORTED,
+    UNKNOWN, OPEN, CLOSED, INIT_ABORTED,
 }
 
 class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleObserver {
     private val mainHandler = android.os.Handler(carContext.mainLooper)
-    private var shelly: Shelly = Shelly(
+    private var shelly: Device = Shelly(
         carContext, screenManager, ::requestInvalidate, ::requestToast
-    ) // FIXME: Should be casted to superclass Device and not relying on knowing the implementation
+    )
 
     private var locationManager: LocationManager? = null
     private var locationListener: LocationListener? = null
@@ -88,7 +88,7 @@ class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleO
 
     override fun onStop(owner: LifecycleOwner) {
         super.onStop(owner)
-        shelly.inputStatus = DoorStatus.INITIALIZED
+        shelly.reset()
     }
 
     override fun onResume(owner: LifecycleOwner) {

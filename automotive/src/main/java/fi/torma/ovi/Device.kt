@@ -6,4 +6,5 @@ import androidx.car.app.model.GridItem
 abstract class Device : LocationListener {
     abstract fun buildItems(): List<GridItem>
     abstract fun refresh()
+    abstract fun reset()
 }
