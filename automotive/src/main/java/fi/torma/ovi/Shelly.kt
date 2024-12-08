@@ -35,10 +35,6 @@ class Shelly(
     var inputStatus: DoorStatus = DoorStatus.UNKNOWN
     var closeToDoor: Boolean = false
 
-    init {
-        refresh()
-    }
-
     override fun buildItems(): List<GridItem> {
         return listOf(buildDoor(), buildRefresh())
     }
