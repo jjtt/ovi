@@ -137,7 +137,7 @@ class Shelly(
                             Log.d("MainScreen", "Failed to open door", e)
                             CarToast.makeText(
                                 carContext,
-                                "Failed to open door: " + e.message,
+                                "Failed to open door: ${e.message}",
                                 CarToast.LENGTH_LONG
                             ).show()
                         }
@@ -175,7 +175,7 @@ class Shelly(
             } catch (e: Exception) {
                 Log.d("MainScreen", "Failed to fetch door status", e)
                 CarToast.makeText(
-                    carContext, "Door status error: " + e.message, CarToast.LENGTH_LONG
+                    carContext, "Door status error: ${e.message}", CarToast.LENGTH_LONG
                 ).show()
                 inputStatus = DoorStatus.INIT_ABORTED
                 Log.d(
