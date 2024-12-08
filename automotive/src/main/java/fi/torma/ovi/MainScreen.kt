@@ -1,26 +1,21 @@
 package fi.torma.ovi
 
-import ConfirmScreen
 import SettingsScreen
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
-import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.util.Log
 import androidx.car.app.CarContext
 import androidx.car.app.CarToast
-import androidx.car.app.OnScreenResultListener
 import androidx.car.app.Screen
 import androidx.car.app.model.Action
 import androidx.car.app.model.ActionStrip
-import androidx.car.app.model.CarIcon
-import androidx.car.app.model.GridItem
 import androidx.car.app.model.GridTemplate
 import androidx.car.app.model.ItemList
 import androidx.car.app.model.Template
 import androidx.core.content.ContextCompat
-import androidx.core.graphics.drawable.IconCompat
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import kotlinx.coroutines.GlobalScope
@@ -33,8 +28,10 @@ enum class DoorStatus {
 }
 
 class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleObserver {
-    private var inputStatus: DoorStatus = DoorStatus.UNINITIALIZED
-    private var closeToDoor: Boolean = false
+    private var shelly: Shelly = Shelly(
+        carContext, screenManager, ::invalidate
+    ) // FIXME: Should be casted to superclass Device and not relying on knowing the implementation
+
     private var locationManager: LocationManager? = null
     private var locationListener: LocationListener? = null
 
@@ -43,18 +40,7 @@ class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleO
 
         locationManager = carContext.getSystemService(Context.LOCATION_SERVICE) as LocationManager
 
-        locationListener = LocationListener { location ->
-            val targetLocation = Location("target").apply {
-                latitude = 60.0
-                longitude = 25.0
-            }
-            val distance = location.distanceTo(targetLocation)
-            if (closeToDoor != (distance < 200)) {
-                closeToDoor = distance < 200
-                inputStatus = DoorStatus.INITIALIZED
-                invalidate()
-            }
-        }
+        locationListener = shelly
 
         if (ContextCompat.checkSelfPermission(
                 carContext, android.Manifest.permission.ACCESS_FINE_LOCATION
@@ -79,6 +65,7 @@ class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleO
         }
     }
 
+    @SuppressLint("MissingPermission")
     private fun requestLocation() {
         locationManager?.requestLocationUpdates(
             LocationManager.GPS_PROVIDER, 30000L, 100f, locationListener!!
@@ -87,7 +74,7 @@ class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleO
 
     override fun onStop(owner: LifecycleOwner) {
         super.onStop(owner)
-        inputStatus = DoorStatus.UNINITIALIZED
+        shelly.inputStatus = DoorStatus.UNINITIALIZED
     }
 
     init {
@@ -95,8 +82,8 @@ class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleO
     }
 
     override fun onGetTemplate(): Template {
-        val invalidate = if (inputStatus == DoorStatus.UNINITIALIZED) {
-            inputStatus = DoorStatus.INITIALIZED
+        val invalidate = if (shelly.inputStatus == DoorStatus.UNINITIALIZED) {
+            shelly.inputStatus = DoorStatus.INITIALIZED
             true
         } else {
             false
@@ -112,71 +99,17 @@ class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleO
 
         val listBuilder = ItemList.Builder()
 
-        val door = GridItem.Builder().setTitle("Garage door")
-        when (inputStatus) {
-            DoorStatus.UNINITIALIZED -> CarToast.makeText(
-                carContext, "Door status uninitialized, this is a bug", CarToast.LENGTH_LONG
-            ).show()
-
-            DoorStatus.INITIALIZED -> door.setLoading(true)
-            DoorStatus.CLOSED -> door.setImage(
-                CarIcon.Builder(
-                    IconCompat.createWithResource(carContext, R.drawable.baseline_door_front_24)
-                ).build()
-            ).setOnClickListener(this::toggleDoor)
-
-            DoorStatus.OPEN -> door.setImage(
-                CarIcon.Builder(
-                    IconCompat.createWithResource(
-                        carContext, R.drawable.baseline_meeting_room_24
-                    )
-                ).build()
-            ).setOnClickListener(this::toggleDoor)
-
-            DoorStatus.INIT_ABORTED -> door.setImage(
-                CarIcon.Builder(
-                    IconCompat.createWithResource(
-                        carContext, R.drawable.baseline_no_meeting_room_24
-                    )
-                ).build()
-            ).setOnClickListener(this::toggleDoor)
+        for (item in shelly.buildItems()) {
+            listBuilder.addItem(item)
         }
-
-        val refresh = GridItem.Builder().setTitle("Refresh")
-
-        when (inputStatus) {
-            DoorStatus.INITIALIZED -> {
-                refresh.setImage(
-                    CarIcon.Builder(
-                        IconCompat.createWithResource(carContext, R.drawable.baseline_cancel_24)
-                    ).build()
-                ).setOnClickListener {
-                    inputStatus = DoorStatus.INIT_ABORTED
-                    invalidate()
-                }
-            }
-
-            else -> {
-                refresh.setImage(
-                    CarIcon.Builder(
-                        IconCompat.createWithResource(carContext, R.drawable.baseline_refresh_24)
-                    ).build()
-                ).setOnClickListener {
-                    inputStatus = DoorStatus.INITIALIZED
-                    invalidate()
-                }
-            }
-        }
-
-        listBuilder.addItem(
-            door.build()
-        ).addItem(
-            refresh.build()
-        )
 
         if (invalidate) {
             GlobalScope.launch {
                 delay(100)
+                Log.d(
+                    "MainScreen",
+                    "Current thread ID: ${Thread.currentThread().id} - delayed call from onGetTemplate()"
+                )
                 invalidate()
             }
         }
@@ -184,6 +117,7 @@ class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleO
         return GridTemplate.Builder().setTitle("Devices").setActionStrip(actionStrip)
             .setSingleList(listBuilder.build()).build()
     }
+
 
     private fun fetchDoorStatus() {
         GlobalScope.launch {
@@ -196,8 +130,12 @@ class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleO
                     """{"id":0,"state":false}""" -> DoorStatus.OPEN
                     else -> DoorStatus.INIT_ABORTED
                 }
-                if (newStatus != inputStatus) {
-                    inputStatus = newStatus
+                if (newStatus != shelly.inputStatus) {
+                    shelly.inputStatus = newStatus
+                    Log.d(
+                        "MainScreen",
+                        "Current thread ID: ${Thread.currentThread().id} - door status has updated"
+                    )
                     invalidate()
                 }
             } catch (e: Exception) {
@@ -205,42 +143,14 @@ class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleO
                 CarToast.makeText(
                     carContext, "Door status error: " + e.message, CarToast.LENGTH_LONG
                 ).show()
-                inputStatus = DoorStatus.INIT_ABORTED
+                shelly.inputStatus = DoorStatus.INIT_ABORTED
+                Log.d(
+                    "MainScreen",
+                    "Current thread ID: ${Thread.currentThread().id} - door status update failed"
+                )
                 invalidate()
             }
         }
     }
 
-    private fun toggleDoor() {
-        if (closeToDoor == true) {
-            val listener = OnScreenResultListener { result ->
-                if (result == true) {
-                    GlobalScope.launch {
-                        try {
-                            val response = requestSwitchOn(password(carContext))
-                            if (response != null) {
-                                CarToast.makeText(
-                                    carContext, "Door operating", CarToast.LENGTH_LONG
-                                ).show()
-                                inputStatus = DoorStatus.INITIALIZED
-                                invalidate()
-                            }
-                        } catch (e: Exception) {
-                            Log.d("MainScreen", "Failed to open door", e)
-                            CarToast.makeText(
-                                carContext,
-                                "Failed to open door: " + e.message,
-                                CarToast.LENGTH_LONG
-                            ).show()
-                        }
-                    }
-                }
-            }
-            screenManager.pushForResult(ConfirmScreen(carContext), listener)
-        } else {
-            CarToast.makeText(
-                carContext, "You are not close enough to the door", CarToast.LENGTH_LONG
-            ).show()
-        }
-    }
 }
