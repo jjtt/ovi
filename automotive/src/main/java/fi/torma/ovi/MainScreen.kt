@@ -3,10 +3,10 @@ package fi.torma.ovi
 import SettingsScreen
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.location.LocationListener
 import android.location.LocationManager
-import android.util.Log
 import androidx.car.app.CarContext
 import androidx.car.app.CarToast
 import androidx.car.app.Screen
@@ -26,6 +26,7 @@ enum class DoorStatus {
 
 class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleObserver {
     private val mainHandler = android.os.Handler(carContext.mainLooper)
+    private lateinit var shellyPreferences: SharedPreferences
     private var shelly: Device = Shelly(
         carContext, screenManager, ::requestInvalidate, ::requestToast
     )
@@ -48,6 +49,10 @@ class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleO
 
     override fun onCreate(owner: LifecycleOwner) {
         super.onCreate(owner)
+
+        shellyPreferences = carContext.getSharedPreferences("Shelly", Context.MODE_PRIVATE)
+
+        shelly.loadState(shellyPreferences)
 
         locationManager = carContext.getSystemService(Context.LOCATION_SERVICE) as LocationManager
 
@@ -84,6 +89,7 @@ class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleO
 
     override fun onStop(owner: LifecycleOwner) {
         super.onStop(owner)
+        shelly.saveState(shellyPreferences)
         shelly.reset()
     }
 

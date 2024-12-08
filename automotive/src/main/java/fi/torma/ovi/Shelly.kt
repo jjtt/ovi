@@ -1,6 +1,7 @@
 package fi.torma.ovi
 
 import ConfirmScreen
+import android.content.SharedPreferences
 import android.location.Location
 import android.util.Log
 import androidx.car.app.CarContext
@@ -58,14 +59,18 @@ class Shelly(
             DoorStatus.UNKNOWN -> door.setLoading(true)
             DoorStatus.CLOSED -> door.setImage(
                 CarIcon.Builder(
-                    IconCompat.createWithResource(carContext, R.drawable.baseline_door_front_24)
+                    IconCompat.createWithResource(
+                        carContext,
+                        if (closeToDoor) R.drawable.baseline_door_front_24 else R.drawable.outline_door_front_24
+                    )
                 ).build()
             ).setOnClickListener(this::toggleDoor)
 
             DoorStatus.OPEN -> door.setImage(
                 CarIcon.Builder(
                     IconCompat.createWithResource(
-                        carContext, R.drawable.baseline_meeting_room_24
+                        carContext,
+                        if (closeToDoor) R.drawable.baseline_meeting_room_24 else R.drawable.outline_meeting_room_24
                     )
                 ).build()
             ).setOnClickListener(this::toggleDoor)
@@ -73,7 +78,8 @@ class Shelly(
             DoorStatus.INIT_ABORTED -> door.setImage(
                 CarIcon.Builder(
                     IconCompat.createWithResource(
-                        carContext, R.drawable.baseline_no_meeting_room_24
+                        carContext,
+                        if (closeToDoor) R.drawable.baseline_no_meeting_room_24 else R.drawable.outline_no_meeting_room_24
                     )
                 ).build()
             ).setOnClickListener(this::toggleDoor)
@@ -139,6 +145,18 @@ class Shelly(
 
     override fun reset() {
         inputStatus = DoorStatus.UNKNOWN
+    }
+
+    override fun saveState(sharedPreferences: SharedPreferences) {
+        with (sharedPreferences.edit())
+        {
+            putBoolean("closeToDoor", closeToDoor)
+            apply()
+        }
+    }
+
+    override fun loadState(sharedPreferences: SharedPreferences) {
+        closeToDoor = sharedPreferences.getBoolean("closeToDoor", false)
     }
 
     override fun refresh() {
