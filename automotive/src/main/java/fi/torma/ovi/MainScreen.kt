@@ -24,16 +24,27 @@ import kotlinx.coroutines.launch
 import password
 
 enum class DoorStatus {
-    UNINITIALIZED, INITIALIZED, OPEN, CLOSED, INIT_ABORTED,
+    INITIALIZED, OPEN, CLOSED, INIT_ABORTED,
 }
 
 class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleObserver {
+    private val mainHandler = android.os.Handler(carContext.mainLooper)
     private var shelly: Shelly = Shelly(
-        carContext, screenManager, ::invalidate
+        carContext, screenManager, ::requestInvalidate
     ) // FIXME: Should be casted to superclass Device and not relying on knowing the implementation
 
     private var locationManager: LocationManager? = null
     private var locationListener: LocationListener? = null
+
+    fun requestInvalidate() {
+        mainHandler.post {
+            Log.d(
+                "MainScreen",
+                "Current thread ID: ${Thread.currentThread().id} - invalidate() requested"
+            )
+            invalidate()
+        }
+    }
 
     override fun onCreate(owner: LifecycleOwner) {
         super.onCreate(owner)
@@ -74,7 +85,12 @@ class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleO
 
     override fun onStop(owner: LifecycleOwner) {
         super.onStop(owner)
-        shelly.inputStatus = DoorStatus.UNINITIALIZED
+        shelly.inputStatus = DoorStatus.INITIALIZED
+    }
+
+    override fun onResume(owner: LifecycleOwner) {
+        super.onResume(owner)
+        shelly.refresh()
     }
 
     init {
@@ -82,15 +98,6 @@ class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleO
     }
 
     override fun onGetTemplate(): Template {
-        val invalidate = if (shelly.inputStatus == DoorStatus.UNINITIALIZED) {
-            shelly.inputStatus = DoorStatus.INITIALIZED
-            true
-        } else {
-            false
-        }
-
-        fetchDoorStatus()
-
         val action = Action.Builder().setOnClickListener {
             screenManager.push(SettingsScreen(carContext))
         }.setTitle("Settings").build()
@@ -103,54 +110,7 @@ class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleO
             listBuilder.addItem(item)
         }
 
-        if (invalidate) {
-            GlobalScope.launch {
-                delay(100)
-                Log.d(
-                    "MainScreen",
-                    "Current thread ID: ${Thread.currentThread().id} - delayed call from onGetTemplate()"
-                )
-                invalidate()
-            }
-        }
-
         return GridTemplate.Builder().setTitle("Devices").setActionStrip(actionStrip)
             .setSingleList(listBuilder.build()).build()
     }
-
-
-    private fun fetchDoorStatus() {
-        GlobalScope.launch {
-            try {
-                Log.d("MainScreen", "Fetching door status")
-                val status = requestInputStatus(password(carContext))
-                Log.d("MainScreen", "Door status: $status")
-                val newStatus = when (status) {
-                    """{"id":0,"state":true}""" -> DoorStatus.CLOSED
-                    """{"id":0,"state":false}""" -> DoorStatus.OPEN
-                    else -> DoorStatus.INIT_ABORTED
-                }
-                if (newStatus != shelly.inputStatus) {
-                    shelly.inputStatus = newStatus
-                    Log.d(
-                        "MainScreen",
-                        "Current thread ID: ${Thread.currentThread().id} - door status has updated"
-                    )
-                    invalidate()
-                }
-            } catch (e: Exception) {
-                Log.d("MainScreen", "Failed to fetch door status", e)
-                CarToast.makeText(
-                    carContext, "Door status error: " + e.message, CarToast.LENGTH_LONG
-                ).show()
-                shelly.inputStatus = DoorStatus.INIT_ABORTED
-                Log.d(
-                    "MainScreen",
-                    "Current thread ID: ${Thread.currentThread().id} - door status update failed"
-                )
-                invalidate()
-            }
-        }
-    }
-
 }

@@ -29,11 +29,15 @@ import java.util.concurrent.ConcurrentHashMap
 class Shelly(
     private val carContext: CarContext,
     private val screenManager: ScreenManager,
-    private val invalidate: () -> Unit
+    private val requestInvalidate: () -> Unit
 ) : Device() {
 
-    var inputStatus: DoorStatus = DoorStatus.UNINITIALIZED
+    var inputStatus: DoorStatus = DoorStatus.INITIALIZED
     var closeToDoor: Boolean = false
+
+    init {
+        refresh()
+    }
 
     override fun buildItems(): List<GridItem> {
         return listOf(buildDoor(), buildRefresh())
@@ -49,17 +53,13 @@ class Shelly(
             closeToDoor = distance < 200
             inputStatus = DoorStatus.INITIALIZED
             Log.d("Shelly", "Current thread ID: ${Thread.currentThread().id}")
-            invalidate()
+            requestInvalidate()
         }
     }
 
     private fun buildDoor(): GridItem {
         val door = GridItem.Builder().setTitle("Garage door")
         when (inputStatus) {
-            DoorStatus.UNINITIALIZED -> CarToast.makeText(
-                carContext, "Door status uninitialized, this is a bug", CarToast.LENGTH_LONG
-            ).show()
-
             DoorStatus.INITIALIZED -> door.setLoading(true)
             DoorStatus.CLOSED -> door.setImage(
                 CarIcon.Builder(
@@ -98,7 +98,7 @@ class Shelly(
                 ).setOnClickListener {
                     inputStatus = DoorStatus.INIT_ABORTED
                     Log.d("Shelly", "Current thread ID: ${Thread.currentThread().id}")
-                    invalidate()
+                    requestInvalidate()
                 }
             }
 
@@ -110,7 +110,8 @@ class Shelly(
                 ).setOnClickListener {
                     inputStatus = DoorStatus.INITIALIZED
                     Log.d("Shelly", "Current thread ID: ${Thread.currentThread().id}")
-                    invalidate()
+                    refresh()
+                    requestInvalidate()
                 }
             }
         }
@@ -130,7 +131,7 @@ class Shelly(
                                 ).show()
                                 inputStatus = DoorStatus.INITIALIZED
                                 Log.d("Shelly", "Current thread ID: ${Thread.currentThread().id}")
-                                invalidate()
+                                requestInvalidate()
                             }
                         } catch (e: Exception) {
                             Log.d("MainScreen", "Failed to open door", e)
@@ -152,6 +153,39 @@ class Shelly(
         }
     }
 
+    override fun refresh() {
+        GlobalScope.launch {
+            try {
+                Log.d("MainScreen", "Fetching door status")
+                val status = requestInputStatus(password(carContext))
+                Log.d("MainScreen", "Door status: $status")
+                val newStatus = when (status) {
+                    """{"id":0,"state":true}""" -> DoorStatus.CLOSED
+                    """{"id":0,"state":false}""" -> DoorStatus.OPEN
+                    else -> DoorStatus.INIT_ABORTED
+                }
+                if (newStatus != inputStatus) {
+                    inputStatus = newStatus
+                    Log.d(
+                        "Shelly",
+                        "Current thread ID: ${Thread.currentThread().id} - door status has updated"
+                    )
+                    requestInvalidate()
+                }
+            } catch (e: Exception) {
+                Log.d("MainScreen", "Failed to fetch door status", e)
+                CarToast.makeText(
+                    carContext, "Door status error: " + e.message, CarToast.LENGTH_LONG
+                ).show()
+                inputStatus = DoorStatus.INIT_ABORTED
+                Log.d(
+                    "Shelly",
+                    "Current thread ID: ${Thread.currentThread().id} - door status update failed"
+                )
+                requestInvalidate()
+            }
+        }
+    }
 }
 
 
