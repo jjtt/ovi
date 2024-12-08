@@ -36,10 +36,6 @@ class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleO
 
     fun requestInvalidate() {
         mainHandler.post {
-            Log.d(
-                "MainScreen",
-                "Current thread ID: ${Thread.currentThread().id} - invalidate() requested"
-            )
             invalidate()
         }
     }

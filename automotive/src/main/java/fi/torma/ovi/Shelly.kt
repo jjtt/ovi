@@ -48,7 +48,6 @@ class Shelly(
         if (closeToDoor != (distance < 200)) {
             closeToDoor = distance < 200
             inputStatus = DoorStatus.UNKNOWN
-            Log.d("Shelly", "Current thread ID: ${Thread.currentThread().id}")
             requestInvalidate()
         }
     }
@@ -93,7 +92,6 @@ class Shelly(
                     ).build()
                 ).setOnClickListener {
                     inputStatus = DoorStatus.INIT_ABORTED
-                    Log.d("Shelly", "Current thread ID: ${Thread.currentThread().id}")
                     requestInvalidate()
                 }
             }
@@ -105,7 +103,6 @@ class Shelly(
                     ).build()
                 ).setOnClickListener {
                     inputStatus = DoorStatus.UNKNOWN
-                    Log.d("Shelly", "Current thread ID: ${Thread.currentThread().id}")
                     refresh()
                     requestInvalidate()
                 }
@@ -124,7 +121,6 @@ class Shelly(
                             if (response != null) {
                                 requestToast("Door operating")
                                 inputStatus = DoorStatus.UNKNOWN
-                                Log.d("Shelly", "Current thread ID: ${Thread.currentThread().id}")
                                 requestInvalidate()
                             }
                         } catch (e: Exception) {
@@ -159,20 +155,12 @@ class Shelly(
                 }
                 if (newStatus != inputStatus) {
                     inputStatus = newStatus
-                    Log.d(
-                        "Shelly",
-                        "Current thread ID: ${Thread.currentThread().id} - door status has updated"
-                    )
                     requestInvalidate()
                 }
             } catch (e: Exception) {
                 Log.d("Shelly", "Failed to fetch door status", e)
                 requestToast("Door status error: ${e.message}")
                 inputStatus = DoorStatus.INIT_ABORTED
-                Log.d(
-                    "Shelly",
-                    "Current thread ID: ${Thread.currentThread().id} - door status update failed"
-                )
                 requestInvalidate()
             }
         }
