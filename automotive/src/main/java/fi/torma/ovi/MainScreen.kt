@@ -12,10 +12,13 @@ import androidx.car.app.CarToast
 import androidx.car.app.Screen
 import androidx.car.app.model.Action
 import androidx.car.app.model.ActionStrip
+import androidx.car.app.model.CarIcon
+import androidx.car.app.model.GridItem
 import androidx.car.app.model.GridTemplate
 import androidx.car.app.model.ItemList
 import androidx.car.app.model.Template
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.drawable.IconCompat
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import java.util.concurrent.atomic.AtomicInteger
@@ -34,6 +37,7 @@ class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleO
     private var locationManager: LocationManager? = null
     private var locationListener: LocationListener? = null
     private val toastCounter: AtomicInteger = AtomicInteger(0)
+    private val heartBeat: AtomicInteger = AtomicInteger(0)
 
     fun requestInvalidate() {
         mainHandler.post {
@@ -114,6 +118,18 @@ class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleO
         for (item in shelly.buildItems()) {
             listBuilder.addItem(item)
         }
+
+        val beat = heartBeat.getAndIncrement()
+        listBuilder.addItem(
+            GridItem.Builder().setTitle("Heartbeat $beat").setImage(
+                    CarIcon.Builder(
+                        IconCompat.createWithResource(
+                            carContext,
+                            if (beat % 2 == 0) R.drawable.heart0_24 else R.drawable.heart1_24
+                        )
+                    ).build()
+                ).build()
+        )
 
         return GridTemplate.Builder().setTitle("Devices").setActionStrip(actionStrip)
             .setSingleList(listBuilder.build()).build()
