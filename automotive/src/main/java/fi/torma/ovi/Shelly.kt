@@ -48,8 +48,7 @@ class Shelly(
         val distance = location.distanceTo(targetLocation)
         if (closeToDoor != (distance < 200)) {
             closeToDoor = distance < 200
-            inputStatus = DoorStatus.UNKNOWN
-            requestInvalidate()
+            refresh()
         }
     }
 
@@ -108,9 +107,7 @@ class Shelly(
                         IconCompat.createWithResource(carContext, R.drawable.baseline_refresh_24)
                     ).build()
                 ).setOnClickListener {
-                    inputStatus = DoorStatus.UNKNOWN
                     refresh()
-                    requestInvalidate()
                 }
             }
         }
@@ -126,13 +123,12 @@ class Shelly(
                             val response = requestSwitchOn(password(carContext))
                             if (response != null) {
                                 requestToast("Door operating")
-                                inputStatus = DoorStatus.UNKNOWN
-                                requestInvalidate()
                             }
                         } catch (e: Exception) {
                             Log.d("Shelly", "Failed to open door", e)
                             requestToast("Failed to open door: ${e.message}")
                         }
+                        refresh()
                     }
                 }
             }
@@ -160,6 +156,8 @@ class Shelly(
     }
 
     override fun refresh() {
+        inputStatus = DoorStatus.UNKNOWN
+        requestInvalidate()
         GlobalScope.launch {
             try {
                 Log.d("Shelly", "Fetching door status")
