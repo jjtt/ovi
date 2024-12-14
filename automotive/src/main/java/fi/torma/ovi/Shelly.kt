@@ -144,8 +144,7 @@ class Shelly(
     }
 
     override fun saveState(sharedPreferences: SharedPreferences) {
-        with (sharedPreferences.edit())
-        {
+        with(sharedPreferences.edit()) {
             putBoolean("closeToDoor", closeToDoor)
             apply()
         }
