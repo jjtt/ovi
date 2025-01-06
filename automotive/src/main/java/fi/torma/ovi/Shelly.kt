@@ -3,7 +3,6 @@ package fi.torma.ovi
 import ConfirmScreen
 import android.content.SharedPreferences
 import android.location.Location
-import android.util.Log
 import androidx.car.app.CarContext
 import androidx.car.app.OnScreenResultListener
 import androidx.car.app.ScreenManager
@@ -128,7 +127,7 @@ class Shelly(
                                 requestToast("Door operating")
                             }
                         } catch (e: Exception) {
-                            Log.d("Shelly", "Failed to open door", e)
+                            //Log.d("Shelly", "Failed to open door", e)
                             requestToast("Failed to open door: ${e.message}")
                         }
                         refresh()
@@ -163,9 +162,9 @@ class Shelly(
         backgroundJob?.cancel()
         backgroundJob = GlobalScope.launch(Dispatchers.IO) {
             try {
-                Log.d("Shelly", "Fetching door status")
+                //Log.d("Shelly", "Fetching door status")
                 val status = requestInputStatus(password(carContext))
-                Log.d("Shelly", "Door status: $status")
+                //Log.d("Shelly", "Door status: $status")
                 val newStatus = when (status) {
                     """{"id":0,"state":true}""" -> DoorStatus.CLOSED
                     """{"id":0,"state":false}""" -> DoorStatus.OPEN
@@ -176,7 +175,7 @@ class Shelly(
                     requestInvalidate()
                 }
             } catch (e: Exception) {
-                Log.d("Shelly", "Failed to fetch door status", e)
+                //Log.d("Shelly", "Failed to fetch door status", e)
                 requestToast("Door status error: ${e.message}")
                 inputStatus = DoorStatus.INIT_ABORTED
                 requestInvalidate()
