@@ -31,13 +31,14 @@ class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleO
     private val mainHandler = android.os.Handler(carContext.mainLooper)
     private lateinit var shellyPreferences: SharedPreferences
     private var shelly: Device = Shelly(
-        carContext, screenManager, ::requestInvalidate, ::requestToast
+        carContext, screenManager, ::requestInvalidate, ::requestToast, ::requestNoRefreshOnResume
     )
 
     private var locationManager: LocationManager? = null
     private var locationListener: LocationListener? = null
     private val toastCounter: AtomicInteger = AtomicInteger(0)
     private val heartBeat: AtomicInteger = AtomicInteger(0)
+    private var noRefreshOnResume: Boolean = false
 
     fun requestInvalidate() {
         mainHandler.post {
@@ -49,6 +50,10 @@ class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleO
         CarToast.makeText(
             carContext, "${toastCounter.incrementAndGet()}: $message", CarToast.LENGTH_LONG
         ).show()
+    }
+
+    fun requestNoRefreshOnResume() {
+        noRefreshOnResume = true
     }
 
     override fun onCreate(owner: LifecycleOwner) {
@@ -99,7 +104,11 @@ class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleO
 
     override fun onResume(owner: LifecycleOwner) {
         super.onResume(owner)
-        shelly.refresh()
+        if (noRefreshOnResume) {
+            noRefreshOnResume = false
+        } else {
+            shelly.refresh()
+        }
     }
 
     init {

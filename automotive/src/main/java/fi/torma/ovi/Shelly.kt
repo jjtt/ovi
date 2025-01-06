@@ -30,7 +30,8 @@ class Shelly(
     private val carContext: CarContext,
     private val screenManager: ScreenManager,
     private val requestInvalidate: () -> Unit,
-    private val requestToast: (String) -> Unit
+    private val requestToast: (String) -> Unit,
+    private val requestNoRefreshOnResume: () -> Unit
 ) : Device() {
 
     var inputStatus: DoorStatus = DoorStatus.UNKNOWN
@@ -120,6 +121,8 @@ class Shelly(
             val listener = OnScreenResultListener { result ->
                 if (result == true) {
                     backgroundJob?.cancel()
+                    requestNoRefreshOnResume()
+                    inputStatus = DoorStatus.UNKNOWN
                     backgroundJob = GlobalScope.launch(Dispatchers.IO) {
                         try {
                             val response = requestSwitchOn(password(carContext))
