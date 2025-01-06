@@ -124,10 +124,8 @@ class Shelly(
                     inputStatus = DoorStatus.UNKNOWN
                     doorJob = GlobalScope.launch(Dispatchers.IO) {
                         try {
-                            val response = requestSwitchOn(password(carContext))
-                            if (response != null) {
-                                requestToast("Door operating")
-                            }
+                            requestSwitchOn(password(carContext))
+                            requestToast("Door operating")
                         } catch (e: Exception) {
                             //Log.d("Shelly", "Failed to open door", e)
                             requestToast("Failed to open door: ${e.message}")
