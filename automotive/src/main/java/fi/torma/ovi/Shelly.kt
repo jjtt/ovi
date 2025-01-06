@@ -17,6 +17,7 @@ import com.burgstaller.okhttp.digest.Credentials
 import com.burgstaller.okhttp.digest.DigestAuthenticator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
@@ -35,6 +36,7 @@ class Shelly(
 
     var inputStatus: DoorStatus = DoorStatus.UNKNOWN
     var closeToDoor: Boolean = false
+    var backgroundJob: Job? = null
 
     override fun buildItems(): List<GridItem> {
         return listOf(buildDoor(), buildRefresh())
@@ -118,7 +120,8 @@ class Shelly(
         if (closeToDoor == true) {
             val listener = OnScreenResultListener { result ->
                 if (result == true) {
-                    GlobalScope.launch {
+                    backgroundJob?.cancel()
+                    backgroundJob = GlobalScope.launch(Dispatchers.IO) {
                         try {
                             val response = requestSwitchOn(password(carContext))
                             if (response != null) {
@@ -157,7 +160,8 @@ class Shelly(
     override fun refresh() {
         inputStatus = DoorStatus.UNKNOWN
         requestInvalidate()
-        GlobalScope.launch {
+        backgroundJob?.cancel()
+        backgroundJob = GlobalScope.launch(Dispatchers.IO) {
             try {
                 Log.d("Shelly", "Fetching door status")
                 val status = requestInputStatus(password(carContext))
@@ -191,21 +195,19 @@ suspend fun requestSwitchOn(password: String): String? = withContext(Dispatchers
 }
 
 suspend fun request(url: String, password: String): String? {
-    return withContext(Dispatchers.IO) {
-        withTimeoutOrNull(1000) {
-            val authenticator = DigestAuthenticator(Credentials("admin", password))
+    return withTimeoutOrNull(1000) {
+        val authenticator = DigestAuthenticator(Credentials("admin", password))
 
-            val authCache: Map<String, CachingAuthenticator> = ConcurrentHashMap()
-            val client: OkHttpClient = OkHttpClient.Builder().callTimeout(Duration.ofSeconds(1))
-                .connectTimeout(Duration.ofSeconds(1)).readTimeout(Duration.ofSeconds(1))
-                .writeTimeout(Duration.ofSeconds(1))
-                .authenticator(CachingAuthenticatorDecorator(authenticator, authCache))
-                .addInterceptor(AuthenticationCacheInterceptor(authCache)).build()
+        val authCache: Map<String, CachingAuthenticator> = ConcurrentHashMap()
+        val client: OkHttpClient = OkHttpClient.Builder().callTimeout(Duration.ofSeconds(1))
+            .connectTimeout(Duration.ofSeconds(1)).readTimeout(Duration.ofSeconds(1))
+            .writeTimeout(Duration.ofSeconds(1))
+            .authenticator(CachingAuthenticatorDecorator(authenticator, authCache))
+            .addInterceptor(AuthenticationCacheInterceptor(authCache)).build()
 
-            val request: Request = Request.Builder().url(url).get().build()
-            val response = client.newCall(request).execute()
+        val request: Request = Request.Builder().url(url).get().build()
+        val response = client.newCall(request).execute()
 
-            response.body?.string()
-        }
+        response.body?.string()
     }
 }
