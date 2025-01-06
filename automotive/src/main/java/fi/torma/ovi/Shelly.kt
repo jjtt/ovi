@@ -36,7 +36,8 @@ class Shelly(
 
     var inputStatus: DoorStatus = DoorStatus.UNKNOWN
     var closeToDoor: Boolean = false
-    var backgroundJob: Job? = null
+    var statusJob: Job? = null
+    var doorJob: Job? = null
 
     override fun buildItems(): List<GridItem> {
         return listOf(buildDoor(), buildRefresh())
@@ -120,10 +121,10 @@ class Shelly(
         if (closeToDoor == true) {
             val listener = OnScreenResultListener { result ->
                 if (result == true) {
-                    backgroundJob?.cancel()
+                    doorJob?.cancel()
                     requestNoRefreshOnResume()
                     inputStatus = DoorStatus.UNKNOWN
-                    backgroundJob = GlobalScope.launch(Dispatchers.IO) {
+                    doorJob = GlobalScope.launch(Dispatchers.IO) {
                         try {
                             val response = requestSwitchOn(password(carContext))
                             if (response != null) {
@@ -162,8 +163,8 @@ class Shelly(
     override fun refresh() {
         inputStatus = DoorStatus.UNKNOWN
         requestInvalidate()
-        backgroundJob?.cancel()
-        backgroundJob = GlobalScope.launch(Dispatchers.IO) {
+        statusJob?.cancel()
+        statusJob = GlobalScope.launch(Dispatchers.IO) {
             try {
                 //Log.d("Shelly", "Fetching door status")
                 val status = requestInputStatus(password(carContext))
