@@ -18,8 +18,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import password
@@ -189,28 +187,26 @@ class Shelly(
 }
 
 
-suspend fun requestInputStatus(password: String): String? = withContext(Dispatchers.IO) {
-    request("https://foobar.invalid/Input.GetStatus?id=0", password)
+fun requestInputStatus(password: String): String? {
+    return request("https://foobar.invalid/Input.GetStatus?id=0", password)
 }
 
-suspend fun requestSwitchOn(password: String): String? = withContext(Dispatchers.IO) {
-    request("https://foobar.invalid/Switch.Set?id=0&on=true", password)
+fun requestSwitchOn(password: String): String? {
+    return request("https://foobar.invalid/Switch.Set?id=0&on=true", password)
 }
 
-suspend fun request(url: String, password: String): String? {
-    return withTimeoutOrNull(1000) {
-        val authenticator = DigestAuthenticator(Credentials("admin", password))
+fun request(url: String, password: String): String? {
+    val authenticator = DigestAuthenticator(Credentials("admin", password))
 
-        val authCache: Map<String, CachingAuthenticator> = ConcurrentHashMap()
-        val client: OkHttpClient = OkHttpClient.Builder().callTimeout(Duration.ofSeconds(1))
-            .connectTimeout(Duration.ofSeconds(1)).readTimeout(Duration.ofSeconds(1))
-            .writeTimeout(Duration.ofSeconds(1))
-            .authenticator(CachingAuthenticatorDecorator(authenticator, authCache))
-            .addInterceptor(AuthenticationCacheInterceptor(authCache)).build()
+    val authCache: Map<String, CachingAuthenticator> = ConcurrentHashMap()
+    val client: OkHttpClient = OkHttpClient.Builder().callTimeout(Duration.ofSeconds(1))
+        .connectTimeout(Duration.ofSeconds(1)).readTimeout(Duration.ofSeconds(1))
+        .writeTimeout(Duration.ofSeconds(1))
+        .authenticator(CachingAuthenticatorDecorator(authenticator, authCache))
+        .addInterceptor(AuthenticationCacheInterceptor(authCache)).build()
 
-        val request: Request = Request.Builder().url(url).get().build()
-        val response = client.newCall(request).execute()
+    val request: Request = Request.Builder().url(url).get().build()
+    val response = client.newCall(request).execute()
 
-        response.body?.string()
-    }
+    return response.body?.string()
 }
