@@ -182,16 +182,16 @@ class Shelly(
             }
         }
     }
+
+    private fun requestInputStatus(password: String): String? {
+        return request("https://foobar.invalid/Input.GetStatus?id=0", password)
+    }
+
+    private fun requestSwitchOn(password: String): String? {
+        return request("https://foobar.invalid/Switch.Set?id=0&on=true", password)
+    }
 }
 
-
-fun requestInputStatus(password: String): String? {
-    return request("https://foobar.invalid/Input.GetStatus?id=0", password)
-}
-
-fun requestSwitchOn(password: String): String? {
-    return request("https://foobar.invalid/Switch.Set?id=0&on=true", password)
-}
 
 fun request(url: String, password: String): String? {
     val authenticator = DigestAuthenticator(Credentials("admin", password))
