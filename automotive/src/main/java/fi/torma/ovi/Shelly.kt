@@ -37,8 +37,20 @@ class Shelly(
     var statusJob: Job? = null
     var doorJob: Job? = null
 
+    private val statusStats = RequestTimingStatistics();
+    private val doorStats = RequestTimingStatistics();
+
     override fun buildItems(): List<GridItem> {
-        return listOf(buildDoor(), buildRefresh())
+        return listOf(buildDoor(), buildRefresh(),
+            buildStats("min: ${statusStats.getMinDuration() / 1000000} ms", R.drawable.heart1_24),
+            buildStats("avg: ${statusStats.getAverageDuration()/ 1000000} ms", R.drawable.heart1_24),
+            buildStats("max: ${statusStats.getMaxDuration()/ 1000000} ms", R.drawable.heart1_24),
+            buildStats("req: ${statusStats.getNumberOfRequests()}", R.drawable.heart1_24),
+            buildStats("min: ${doorStats.getMinDuration() / 1000000} ms", R.drawable.outline_door_front_24),
+            buildStats("avg: ${doorStats.getAverageDuration()/ 1000000} ms", R.drawable.outline_door_front_24),
+            buildStats("max: ${doorStats.getMaxDuration()/ 1000000} ms", R.drawable.outline_door_front_24),
+            buildStats("req: ${doorStats.getNumberOfRequests()}", R.drawable.outline_door_front_24)
+        )
     }
 
     override fun onLocationChanged(location: Location) {
@@ -115,6 +127,17 @@ class Shelly(
         return refresh.build()
     }
 
+    private fun buildStats(title: String, icon: Int): GridItem {
+        return GridItem.Builder()
+            .setTitle(title)
+            .setImage(
+                CarIcon.Builder(
+                    IconCompat.createWithResource(carContext, icon)
+                ).build()
+            )
+            .build()
+    }
+
     private fun toggleDoor() {
         if (closeToDoor == true) {
             val listener = OnScreenResultListener { result ->
@@ -184,11 +207,15 @@ class Shelly(
     }
 
     private fun requestInputStatus(password: String): String? {
+        val start = System.nanoTime()
         return request("https://foobar.invalid/Input.GetStatus?id=0", password)
+            .also { statusStats.addDuration(System.nanoTime() - start) }
     }
 
     private fun requestSwitchOn(password: String): String? {
+        val start = System.nanoTime()
         return request("https://foobar.invalid/Switch.Set?id=0&on=true", password)
+            .also { doorStats.addDuration(System.nanoTime() - start) }
     }
 }
 
@@ -207,4 +234,36 @@ fun request(url: String, password: String): String? {
     val response = client.newCall(request).execute()
 
     return response.body?.string()
+}
+
+
+class RequestTimingStatistics {
+    private val durations = mutableListOf<Long>()
+
+    fun addDuration(duration: Long) {
+        durations.add(duration)
+    }
+
+    fun getAverageDuration(): Long {
+        if (durations.isEmpty()) return 0
+        return durations.average().toLong()
+    }
+
+    fun getMinDuration(): Long {
+        if (durations.isEmpty()) return 0
+        return durations.minOrNull() ?: 0
+    }
+
+    fun getMaxDuration(): Long {
+        if (durations.isEmpty()) return 0
+        return durations.maxOrNull() ?: 0
+    }
+
+    fun getNumberOfRequests(): Int {
+        return durations.size
+    }
+
+    fun clear() {
+        durations.clear()
+    }
 }
