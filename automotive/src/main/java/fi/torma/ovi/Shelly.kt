@@ -245,17 +245,14 @@ class RequestTimingStatistics {
     }
 
     fun getAverageDuration(): Long {
-        if (durations.isEmpty()) return 0
         return durations.average().toLong()
     }
 
     fun getMinDuration(): Long {
-        if (durations.isEmpty()) return 0
         return durations.minOrNull() ?: 0
     }
 
     fun getMaxDuration(): Long {
-        if (durations.isEmpty()) return 0
         return durations.maxOrNull() ?: 0
     }
 
