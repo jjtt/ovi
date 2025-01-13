@@ -11,8 +11,8 @@ android {
         applicationId "fi.torma.ovi"
         minSdk 29
         targetSdk 34
-        versionCode 140
-        versionName "1.0.14"
+        versionCode 150
+        versionName "1.0.15"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
