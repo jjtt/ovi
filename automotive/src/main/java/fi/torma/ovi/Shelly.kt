@@ -39,19 +39,24 @@ class Shelly(
     var statusJob: Job? = null
     var doorJob: Job? = null
 
-    private val statusStats = RequestTimingStatistics();
-    private val doorStats = RequestTimingStatistics();
+    private val authStats = RequestTimingStatistics();
+    private val clientStats = RequestTimingStatistics();
+    private val requestStats = RequestTimingStatistics();
 
     override fun buildItems(): List<GridItem> {
         return listOf(buildDoor(), buildRefresh(),
-            buildStats("min: ${statusStats.getMinDuration() / 1000000} ms", R.drawable.heart1_24),
-            buildStats("avg: ${statusStats.getAverageDuration()/ 1000000} ms", R.drawable.heart1_24),
-            buildStats("max: ${statusStats.getMaxDuration()/ 1000000} ms", R.drawable.heart1_24),
-            buildStats("req: ${statusStats.getNumberOfRequests()}", R.drawable.heart1_24),
-            buildStats("min: ${doorStats.getMinDuration() / 1000000} ms", R.drawable.outline_door_front_24),
-            buildStats("avg: ${doorStats.getAverageDuration()/ 1000000} ms", R.drawable.outline_door_front_24),
-            buildStats("max: ${doorStats.getMaxDuration()/ 1000000} ms", R.drawable.outline_door_front_24),
-            buildStats("req: ${doorStats.getNumberOfRequests()}", R.drawable.outline_door_front_24)
+            buildStats("min: ${authStats.getMinDuration() / 1000000} ms", R.drawable.heart1_24),
+            buildStats("avg: ${authStats.getAverageDuration()/ 1000000} ms", R.drawable.heart1_24),
+            buildStats("max: ${authStats.getMaxDuration()/ 1000000} ms", R.drawable.heart1_24),
+            buildStats("req: ${authStats.getNumberOfRequests()}", R.drawable.heart1_24),
+            buildStats("min: ${clientStats.getMinDuration() / 1000000} ms", R.drawable.outline_door_front_24),
+            buildStats("avg: ${clientStats.getAverageDuration()/ 1000000} ms", R.drawable.outline_door_front_24),
+            buildStats("max: ${clientStats.getMaxDuration()/ 1000000} ms", R.drawable.outline_door_front_24),
+            buildStats("req: ${clientStats.getNumberOfRequests()}", R.drawable.outline_door_front_24),
+            buildStats("min: ${requestStats.getMinDuration() / 1000000} ms", R.drawable.heart1_24),
+            buildStats("avg: ${requestStats.getAverageDuration()/ 1000000} ms", R.drawable.heart1_24),
+            buildStats("max: ${requestStats.getMaxDuration()/ 1000000} ms", R.drawable.heart1_24),
+            buildStats("req: ${requestStats.getNumberOfRequests()}", R.drawable.heart1_24),
         )
     }
 
@@ -209,34 +214,38 @@ class Shelly(
     }
 
     private fun requestInputStatus(password: String): String? {
-        val start = System.nanoTime()
         return request("$BASE_URL/Input.GetStatus?id=0", password)
-            .also { statusStats.addDuration(System.nanoTime() - start) }
     }
 
     private fun requestSwitchOn(password: String): String? {
-        val start = System.nanoTime()
         return request("$BASE_URL/Switch.Set?id=0&on=true", password)
-            .also { doorStats.addDuration(System.nanoTime() - start) }
+    }
+
+    private fun request(url: String, password: String): String? {
+        val start = System.nanoTime()
+        val authenticator = DigestAuthenticator(Credentials("admin", password))
+
+        val beforeClient = System.nanoTime()
+        val authCache: Map<String, CachingAuthenticator> = ConcurrentHashMap()
+        val client: OkHttpClient = OkHttpClient.Builder().callTimeout(Duration.ofSeconds(1))
+            .connectTimeout(Duration.ofSeconds(1)).readTimeout(Duration.ofSeconds(1))
+            .writeTimeout(Duration.ofSeconds(1))
+            .authenticator(CachingAuthenticatorDecorator(authenticator, authCache))
+            .addInterceptor(AuthenticationCacheInterceptor(authCache)).build()
+
+        val afterClient = System.nanoTime()
+        val request: Request = Request.Builder().url(url).get().build()
+        val response = client.newCall(request).execute()
+
+        return response.body?.string()
+            .also {
+                authStats.addDuration(beforeClient - start)
+                clientStats.addDuration(afterClient - beforeClient)
+                requestStats.addDuration(System.nanoTime() - afterClient)
+            }
     }
 }
 
-
-fun request(url: String, password: String): String? {
-    val authenticator = DigestAuthenticator(Credentials("admin", password))
-
-    val authCache: Map<String, CachingAuthenticator> = ConcurrentHashMap()
-    val client: OkHttpClient = OkHttpClient.Builder().callTimeout(Duration.ofSeconds(1))
-        .connectTimeout(Duration.ofSeconds(1)).readTimeout(Duration.ofSeconds(1))
-        .writeTimeout(Duration.ofSeconds(1))
-        .authenticator(CachingAuthenticatorDecorator(authenticator, authCache))
-        .addInterceptor(AuthenticationCacheInterceptor(authCache)).build()
-
-    val request: Request = Request.Builder().url(url).get().build()
-    val response = client.newCall(request).execute()
-
-    return response.body?.string()
-}
 
 
 class RequestTimingStatistics {
