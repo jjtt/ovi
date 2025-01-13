@@ -24,6 +24,8 @@ import password
 import java.time.Duration
 import java.util.concurrent.ConcurrentHashMap
 
+private const val BASE_URL = "https://foobar.invalid"
+
 class Shelly(
     private val carContext: CarContext,
     private val screenManager: ScreenManager,
@@ -208,13 +210,13 @@ class Shelly(
 
     private fun requestInputStatus(password: String): String? {
         val start = System.nanoTime()
-        return request("https://foobar.invalid/Input.GetStatus?id=0", password)
+        return request("$BASE_URL/Input.GetStatus?id=0", password)
             .also { statusStats.addDuration(System.nanoTime() - start) }
     }
 
     private fun requestSwitchOn(password: String): String? {
         val start = System.nanoTime()
-        return request("https://foobar.invalid/Switch.Set?id=0&on=true", password)
+        return request("$BASE_URL/Switch.Set?id=0&on=true", password)
             .also { doorStats.addDuration(System.nanoTime() - start) }
     }
 }
