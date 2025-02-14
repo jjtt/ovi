@@ -7,17 +7,19 @@ import android.content.pm.PackageManager
 import android.location.LocationListener
 import android.location.LocationManager
 import androidx.car.app.CarContext
-import androidx.car.app.CarToast
 import androidx.car.app.Screen
 import androidx.car.app.model.Action
 import androidx.car.app.model.ActionStrip
+import androidx.car.app.model.CarIcon
 import androidx.car.app.model.GridTemplate
 import androidx.car.app.model.ItemList
 import androidx.car.app.model.Template
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.drawable.IconCompat
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
-import java.util.concurrent.atomic.AtomicInteger
+import java.time.LocalTime
+import java.util.LinkedList
 
 enum class DoorStatus {
     UNKNOWN, OPEN, CLOSED, INIT_ABORTED,
@@ -32,8 +34,8 @@ class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleO
 
     private var locationManager: LocationManager? = null
     private var locationListener: LocationListener? = null
-    private val toastCounter: AtomicInteger = AtomicInteger(0)
     private var noRefreshOnResume: Boolean = false
+    private var logs: LinkedList<String> = LinkedList()
 
     fun requestInvalidate() {
         mainHandler.post {
@@ -42,9 +44,10 @@ class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleO
     }
 
     fun requestToast(message: String) {
-        CarToast.makeText(
-            carContext, "${toastCounter.incrementAndGet()}: $message", CarToast.LENGTH_LONG
-        ).show()
+        logs.addFirst("[${LocalTime.now()}] $message")
+        while (logs.size > 100) {
+            logs.removeLast()
+        }
     }
 
     fun requestNoRefreshOnResume() {
@@ -115,7 +118,20 @@ class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleO
             screenManager.push(SettingsScreen(carContext))
         }.setTitle("Settings").build()
 
-        val actionStrip: ActionStrip = ActionStrip.Builder().addAction(action).build()
+        val logs = Action.Builder().setOnClickListener {
+            screenManager.push(LogsScreen(carContext, logs))
+        }.setIcon(
+            CarIcon.Builder(
+                IconCompat.createWithResource(
+                    carContext, R.drawable.heart0_24
+                )
+            ).build()
+        ).build()
+
+        val actionStrip: ActionStrip = ActionStrip.Builder()
+            .addAction(action)
+            .addAction(logs)
+            .build()
 
         val listBuilder = ItemList.Builder()
 
