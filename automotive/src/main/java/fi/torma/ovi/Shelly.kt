@@ -1,6 +1,5 @@
 package fi.torma.ovi
 
-import ConfirmScreen
 import android.content.SharedPreferences
 import android.location.Location
 import androidx.car.app.CarContext
@@ -20,7 +19,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import password
 import java.time.Duration
 import java.util.concurrent.ConcurrentHashMap
 
@@ -34,10 +32,10 @@ class Shelly(
     private val requestNoRefreshOnResume: () -> Unit
 ) : Device() {
 
-    var inputStatus: DoorStatus = DoorStatus.UNKNOWN
-    var closeToDoor: Boolean = false
-    var statusJob: Job? = null
-    var doorJob: Job? = null
+    private var inputStatus: DoorStatus = DoorStatus.UNKNOWN
+    private var closeToDoor: Boolean = false
+    private var statusJob: Job? = null
+    private var doorJob: Job? = null
 
     override fun buildItems(): List<GridItem> {
         return listOf(buildDoor(), buildRefresh())
@@ -118,7 +116,7 @@ class Shelly(
     }
 
     private fun toggleDoor() {
-        if (closeToDoor == true) {
+        if (closeToDoor) {
             val listener = OnScreenResultListener { result ->
                 if (result == true) {
                     doorJob?.cancel()
