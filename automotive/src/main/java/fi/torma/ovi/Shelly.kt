@@ -39,25 +39,8 @@ class Shelly(
     var statusJob: Job? = null
     var doorJob: Job? = null
 
-    private val authStats = RequestTimingStatistics();
-    private val clientStats = RequestTimingStatistics();
-    private val requestStats = RequestTimingStatistics();
-
     override fun buildItems(): List<GridItem> {
-        return listOf(buildDoor(), buildRefresh(),
-            buildStats("min: ${authStats.getMinDuration() / 1000000} ms", R.drawable.heart1_24),
-            buildStats("avg: ${authStats.getAverageDuration()/ 1000000} ms", R.drawable.heart1_24),
-            buildStats("max: ${authStats.getMaxDuration()/ 1000000} ms", R.drawable.heart1_24),
-            buildStats("req: ${authStats.getNumberOfRequests()}", R.drawable.heart1_24),
-            buildStats("min: ${clientStats.getMinDuration() / 1000000} ms", R.drawable.outline_door_front_24),
-            buildStats("avg: ${clientStats.getAverageDuration()/ 1000000} ms", R.drawable.outline_door_front_24),
-            buildStats("max: ${clientStats.getMaxDuration()/ 1000000} ms", R.drawable.outline_door_front_24),
-            buildStats("req: ${clientStats.getNumberOfRequests()}", R.drawable.outline_door_front_24),
-            buildStats("min: ${requestStats.getMinDuration() / 1000000} ms", R.drawable.heart1_24),
-            buildStats("avg: ${requestStats.getAverageDuration()/ 1000000} ms", R.drawable.heart1_24),
-            buildStats("max: ${requestStats.getMaxDuration()/ 1000000} ms", R.drawable.heart1_24),
-            buildStats("req: ${requestStats.getNumberOfRequests()}", R.drawable.heart1_24),
-        )
+        return listOf(buildDoor(), buildRefresh())
     }
 
     override fun onLocationChanged(location: Location) {
@@ -132,17 +115,6 @@ class Shelly(
             }
         }
         return refresh.build()
-    }
-
-    private fun buildStats(title: String, icon: Int): GridItem {
-        return GridItem.Builder()
-            .setTitle(title)
-            .setImage(
-                CarIcon.Builder(
-                    IconCompat.createWithResource(carContext, icon)
-                ).build()
-            )
-            .build()
     }
 
     private fun toggleDoor() {
@@ -222,10 +194,8 @@ class Shelly(
     }
 
     private fun request(url: String, password: String): String? {
-        val start = System.nanoTime()
         val authenticator = DigestAuthenticator(Credentials("admin", password))
 
-        val beforeClient = System.nanoTime()
         val authCache: Map<String, CachingAuthenticator> = ConcurrentHashMap()
         val client: OkHttpClient = OkHttpClient.Builder().callTimeout(Duration.ofSeconds(1))
             .connectTimeout(Duration.ofSeconds(1)).readTimeout(Duration.ofSeconds(1))
@@ -233,45 +203,9 @@ class Shelly(
             .authenticator(CachingAuthenticatorDecorator(authenticator, authCache))
             .addInterceptor(AuthenticationCacheInterceptor(authCache)).build()
 
-        val afterClient = System.nanoTime()
         val request: Request = Request.Builder().url(url).get().build()
         val response = client.newCall(request).execute()
 
         return response.body?.string()
-            .also {
-                authStats.addDuration(beforeClient - start)
-                clientStats.addDuration(afterClient - beforeClient)
-                requestStats.addDuration(System.nanoTime() - afterClient)
-            }
-    }
-}
-
-
-
-class RequestTimingStatistics {
-    private val durations = mutableListOf<Long>()
-
-    fun addDuration(duration: Long) {
-        durations.add(duration)
-    }
-
-    fun getAverageDuration(): Long {
-        return durations.average().toLong()
-    }
-
-    fun getMinDuration(): Long {
-        return durations.minOrNull() ?: 0
-    }
-
-    fun getMaxDuration(): Long {
-        return durations.maxOrNull() ?: 0
-    }
-
-    fun getNumberOfRequests(): Int {
-        return durations.size
-    }
-
-    fun clear() {
-        durations.clear()
     }
 }
