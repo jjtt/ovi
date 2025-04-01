@@ -195,9 +195,12 @@ class Shelly(
         val authenticator = DigestAuthenticator(Credentials("admin", password))
 
         val authCache: Map<String, CachingAuthenticator> = ConcurrentHashMap()
-        val client: OkHttpClient = OkHttpClient.Builder().callTimeout(Duration.ofSeconds(1))
-            .connectTimeout(Duration.ofSeconds(1)).readTimeout(Duration.ofSeconds(1))
-            .writeTimeout(Duration.ofSeconds(1))
+        val timeoutSeconds: Long = 5
+        val client: OkHttpClient = OkHttpClient.Builder()
+            .callTimeout(Duration.ofSeconds(timeoutSeconds))
+            .connectTimeout(Duration.ofSeconds(timeoutSeconds))
+            .readTimeout(Duration.ofSeconds(timeoutSeconds))
+            .writeTimeout(Duration.ofSeconds(timeoutSeconds))
             .authenticator(CachingAuthenticatorDecorator(authenticator, authCache))
             .addInterceptor(AuthenticationCacheInterceptor(authCache)).build()
 
