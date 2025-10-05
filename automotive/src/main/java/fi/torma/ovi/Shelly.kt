@@ -22,8 +22,6 @@ import okhttp3.Request
 import java.time.Duration
 import java.util.concurrent.ConcurrentHashMap
 
-private const val BASE_URL = "https://foobar.invalid"
-
 class Shelly(
     private val carContext: CarContext,
     private val screenManager: ScreenManager,
@@ -42,11 +40,13 @@ class Shelly(
     }
 
     override fun onLocationChanged(location: Location) {
-        val targetLocation = Location("target").apply {
-            latitude = 60.0
-            longitude = 25.0
-        }
-        val distance = location.distanceTo(targetLocation)
+        val targetLocation = doorLocation(carContext)
+        val distance =
+            if (targetLocation != null) {
+                location.distanceTo(targetLocation)
+            } else {
+                Float.MAX_VALUE
+            }
         if (closeToDoor != (distance < 200)) {
             closeToDoor = distance < 200
             refresh()
@@ -124,7 +124,7 @@ class Shelly(
                     inputStatus = DoorStatus.UNKNOWN
                     doorJob = GlobalScope.launch(Dispatchers.IO) {
                         try {
-                            requestSwitchOn(password(carContext))
+                            requestSwitchOn(baseUrl(carContext), password(carContext))
                             requestToast("Door operating")
                         } catch (e: Exception) {
                             //Log.d("Shelly", "Failed to open door", e)
@@ -163,7 +163,7 @@ class Shelly(
         statusJob = GlobalScope.launch(Dispatchers.IO) {
             try {
                 //Log.d("Shelly", "Fetching door status")
-                val status = requestInputStatus(password(carContext))
+                val status = requestInputStatus(baseUrl(carContext), password(carContext))
                 //Log.d("Shelly", "Door status: $status")
                 val newStatus = when (status) {
                     """{"id":0,"state":true}""" -> DoorStatus.CLOSED
@@ -183,12 +183,12 @@ class Shelly(
         }
     }
 
-    private fun requestInputStatus(password: String): String? {
-        return request("$BASE_URL/Input.GetStatus?id=0", password)
+    private fun requestInputStatus(baseUrl: String, password: String): String? {
+        return request("$baseUrl/Input.GetStatus?id=0", password)
     }
 
-    private fun requestSwitchOn(password: String): String? {
-        return request("$BASE_URL/Switch.Set?id=0&on=true", password)
+    private fun requestSwitchOn(baseUrl: String, password: String): String? {
+        return request("$baseUrl/Switch.Set?id=0&on=true", password)
     }
 
     private fun request(url: String, password: String): String? {
