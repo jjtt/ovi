@@ -4,7 +4,6 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
-import android.location.LocationListener
 import android.location.LocationManager
 import androidx.car.app.CarContext
 import androidx.car.app.Screen
@@ -31,9 +30,9 @@ class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleO
     private var shelly: Device = Shelly(
         carContext, screenManager, ::requestInvalidate, ::requestToast, ::requestNoRefreshOnResume
     )
+    private var currentLocation: CurrentLocation = CurrentLocation()
 
     private var locationManager: LocationManager? = null
-    private var locationListener: LocationListener? = null
     private var noRefreshOnResume: Boolean = false
     private var logs: LinkedList<String> = LinkedList()
 
@@ -63,8 +62,6 @@ class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleO
 
         locationManager = carContext.getSystemService(Context.LOCATION_SERVICE) as LocationManager
 
-        locationListener = shelly
-
         if (ContextCompat.checkSelfPermission(
                 carContext, android.Manifest.permission.ACCESS_FINE_LOCATION
             ) != PackageManager.PERMISSION_GRANTED
@@ -89,8 +86,9 @@ class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleO
 
     @SuppressLint("MissingPermission")
     private fun requestLocation() {
+        currentLocation.addListener(shelly)
         locationManager?.requestLocationUpdates(
-            LocationManager.GPS_PROVIDER, 30000L, 100f, locationListener!!
+            LocationManager.GPS_PROVIDER, 30000L, 100f, currentLocation
         )
     }
 
@@ -115,7 +113,7 @@ class MainScreen(carContext: CarContext) : Screen(carContext), DefaultLifecycleO
 
     override fun onGetTemplate(): Template {
         val action = Action.Builder().setOnClickListener {
-            screenManager.push(SettingsScreen(carContext))
+            screenManager.push(SettingsScreen(carContext, currentLocation))
         }.setTitle("Settings").build()
 
         val logs = Action.Builder().setOnClickListener {

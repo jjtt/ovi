@@ -5,6 +5,8 @@ import android.location.Location
 import androidx.car.app.CarContext
 import androidx.car.app.Screen
 import androidx.car.app.model.Action
+import androidx.car.app.model.ActionStrip
+import androidx.car.app.model.Header
 import androidx.car.app.model.InputCallback
 import androidx.car.app.model.ItemList
 import androidx.car.app.model.ListTemplate
@@ -12,13 +14,14 @@ import androidx.car.app.model.Row
 import androidx.car.app.model.Template
 import androidx.car.app.model.signin.InputSignInMethod
 import androidx.car.app.model.signin.SignInTemplate
-import androidx.car.app.model.Header
+import java.util.Locale
 
 private const val PASSWORD = "password"
 private const val BASE_URL = "base_url"
 private const val LAT_LON = "lat_lon"
 
-class SettingsScreen(carContext: CarContext) : Screen(carContext) {
+class SettingsScreen(carContext: CarContext, private val currentLocation: CurrentLocation) :
+    Screen(carContext) {
 
     override fun onGetTemplate(): Template {
         val sharedPreferences = carContext.getSharedPreferences("MyApp", Context.MODE_PRIVATE)
@@ -114,13 +117,46 @@ class SettingsScreen(carContext: CarContext) : Screen(carContext) {
                     inputBuilder.setInputType(inputType)
                 }
 
-                return SignInTemplate.Builder(inputBuilder.build())
+                val builder = SignInTemplate.Builder(inputBuilder.build())
                     .setTitle(title)
                     .setHeaderAction(Action.BACK)
-                    .build()
+
+                if (key == LAT_LON) {
+                    builder.setActionStrip(
+                        currentLocationActionStrip()
+                    )
+                }
+                return builder.build()
             }
         }
     }
+
+    private fun currentLocationActionStrip(): ActionStrip = ActionStrip.Builder()
+        .addAction(
+            Action.Builder()
+                .setTitle("Current location")
+                .setOnClickListener {
+                    val location = currentLocation.getLocation()
+                    if (location != null) {
+                        val latlonString = String.format(
+                            Locale.ENGLISH, "%.3f,%.3f",
+                            location.latitude,
+                            location.longitude
+                        )
+                        carContext.getSharedPreferences(
+                            "MyApp",
+                            Context.MODE_PRIVATE
+                        )
+                            .edit()
+                            .putString(LAT_LON, latlonString)
+                            .apply()
+                        currentLocation.callListeners()
+                        screenManager.pop()
+                    }
+                }
+                .build()
+        )
+        .build()
 }
 
 fun password(carContext: CarContext): String {
