@@ -2,8 +2,9 @@ package fi.torma.ovi
 
 import android.location.Location
 import android.location.LocationListener
+import androidx.core.location.LocationListenerCompat
 
-class CurrentLocation : LocationListener {
+class CurrentLocation : LocationListenerCompat {
     private var location: Location? = null
     private var listeners: MutableSet<LocationListener> = mutableSetOf()
 
